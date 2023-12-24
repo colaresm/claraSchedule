@@ -10,6 +10,7 @@ import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:path/path.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 import 'package:intl/intl.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 
 class CalendarPage extends StatefulWidget {
   const CalendarPage({super.key});
@@ -73,11 +74,100 @@ class _CalendarPageState extends State<CalendarPage> {
           }),
       floatingActionButton: FloatingActionButton(
         backgroundColor: const Color.fromARGB(255, 243, 101, 149),
-        onPressed: () {},
+        onPressed: () {
+          _showDialog(context, _calendarBloc);
+        },
         child: const Icon(Icons.add),
       ),
     );
   }
+}
+
+Widget _createDateField(String label, TextEditingController controller) {
+  final dateMaskFormatter = MaskTextInputFormatter(
+    mask: '##-##-####',
+    filter: {'#': RegExp(r'[0-9]')},
+  );
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 8.0),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label),
+        TextField(controller: controller, inputFormatters: [dateMaskFormatter]),
+      ],
+    ),
+  );
+}
+
+Widget _createTextField(String label, TextEditingController controller) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 8.0),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label),
+        TextField(controller: controller),
+      ],
+    ),
+  );
+}
+
+_showDialog(BuildContext context, CalendarBloc _calendarBloc) async {
+  TextEditingController nameController = TextEditingController();
+  TextEditingController descriptionController = TextEditingController();
+  TextEditingController dateController = TextEditingController();
+
+  await showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: const Text('Adicionar Evento'),
+        content: Column(
+          children: [
+            _createTextField('Nome do evento:', nameController),
+            _createTextField('Descrição:', descriptionController),
+            _createDateField('Data:', dateController),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () {
+              String eventName = nameController.text;
+              String description = descriptionController.text;
+              String date = convertDateFormat(dateController.text);
+              bool isValid = eventName.isNotEmpty &&
+                  description.isNotEmpty &&
+                  date.isNotEmpty;
+              if (isValid) {
+                _calendarBloc.add(RegisterEvent(
+                    eventName: eventName,
+                    description: description,
+                    date: date));
+                _calendarBloc.add(GetAllDataEvent());
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Salvar'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+String convertDateFormat(String inputDate) {
+  List<String> parts = inputDate.split('-');
+
+  String outputDate = '${parts[2]}-${parts[1]}-${parts[0]}';
+
+  return outputDate;
 }
 
 List<Meeting> _getDataSource(List<EventModel> events) {
@@ -162,18 +252,18 @@ Future _startDb() async {
   String path = join(databasesPath, 'demo.db');
 
 // Delete the database
-  //await deleteDatabase(path);
+  // await deleteDatabase(path);
 
   Database database = await openDatabase(path, version: 1,
       onCreate: (Database db, int version) async {
     // When creating the db, create the table
     await db.execute(
-        'CREATE TABLE IF NOT EXISTS Events (id INTEGER PRIMARY KEY, eventName TEXT, description TEXT, date TEXT)');
+        'CREATE TABLE IF NOT EXISTS Events(id INTEGER PRIMARY KEY AUTOINCREMENT, eventName TEXT, description TEXT, date TEXT)');
   });
 
-  await database.transaction((txn) async {
-    int id1 = await txn.rawInsert(
-        'INSERT INTO Events (eventName, description, date) VALUES("Estudar", "estudar matematica", "2023-12-22")');
-    print('inserted1: $id1');
-  });
+  //await database.transaction((txn) async {
+  // int id1 = await txn.rawInsert(
+  //    'INSERT INTO Events (eventName, description, date) VALUES("Estudar", "estudar matematica", "2023-12-22")');
+  //  print('inserted1: $id1');
+  // });
 }

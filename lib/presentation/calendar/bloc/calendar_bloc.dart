@@ -12,12 +12,36 @@ class CalendarBloc extends Bloc<CalendarEvent, CalendarState> {
     on<GetAllDataEvent>((event, emit) {
       _getAllEvents();
     });
+    on<RegisterEvent>((event, emit) {
+      _registerEvent(event);
+    });
+  }
+  void _registerEvent(RegisterEvent event) async {
+    EventModel newEvent = EventModel(
+        id: null,
+        eventName: event.eventName,
+        description: event.description,
+        date: event.date);
+
+    Map<String, Object?> eventToJson = newEvent.toJson();
+
+    var databasesPath = await getDatabasesPath();
+    String path = join(databasesPath, 'demo.db');
+    Database database = await openDatabase(
+      path,
+      version: 1,
+    );
+    await database.insert(
+      'Events',
+      eventToJson,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   void _getAllEvents() async {
     emit(LoadingState());
-    
-    await Future.delayed(const Duration(seconds: 1)); 
+
+    await Future.delayed(const Duration(seconds: 1));
 
     var databasesPath = await getDatabasesPath();
     String path = join(databasesPath, 'demo.db');
